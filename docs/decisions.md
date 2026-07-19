@@ -85,3 +85,36 @@ y_rgb = 0.9304 · y_ir + 0.0500   (IR spans RGB y ∈ [0.05, 0.98])
 Fitted on one sequence at one altitude. Re-estimate on 2–3 more sequences
 from the full dataset before treating the transform as global. Spike frames not yet
 inspected visually.
+
+## 6. Early-fusion dataset and training route
+
+**Date:** 2026-07-20
+
+**Decision:** The 4-channel early-fusion baseline uses precomputed fused images
+(`src/scripts/export_fused.py`), trained via a custom entry point
+(`src/scripts/train_fused.py`) rather than the stock `yolo` CLI.
+
+- **Geometry:** the fused frame is the IR frame. Each RGB image is cropped to the IR
+  footprint (decision #5 affine, constants in `src/config/registration.yaml`), resized
+  to 640×512 with INTER_AREA, and the IR image stacked as the 4th channel.
+- **Format:** lossless RGBA PNG, channel order B, G, R, IR. Verified to round-trip as
+  true 4-channel (read back with `cv2.IMREAD_UNCHANGED`).
+- **Labels:** IR labels, used as-is — they are already in fused-frame coordinates.
+  Trade-off: supervision covers only people annotated in IR (1006 boxes vs 1022 in RGB
+  on the sample). Alignment verified visually: people sit inside their boxes in both
+  the RGB crop and the IR channel.
+- **Why a custom trainer:** ultralytics 8.4.102 propagates `channels: 4` from the
+  dataset YAML into the dataset and the model (`ch=4`), and its augmentations are
+  channel-aware (HSV/Albumentations skip non-3-channel images) — but the image reader
+  (`data/base.py:116`) loads with `IMREAD_COLOR` for any channels != 1, silently
+  stripping the 4th channel. `train_fused.py` subclasses `YOLODataset` to read with
+  `IMREAD_UNCHANGED` and asserts the first training batch is (B, 4, H, W).
+  Re-check whether this workaround is still needed on any ultralytics upgrade.
+- **Pretrained stem:** ultralytics 8.4.102 (`nn/tasks.py:326`) already copies
+  pretrained RGB weights into the first 3 input channels of a 4-channel first conv;
+  the IR channel starts from random init. Optional refinement for real runs:
+  initialize the IR channel as the mean of the RGB weights.
+
+**Evidence (smoke split, NOT reportable):** 5 epochs, yolov8n, imgsz 640 — RGB 0.547,
+IR 0.819, fused 0.673 mAP50. All three pipelines train and learn; fused starting
+between the single modalities with a partially-pretrained stem is healthy.
