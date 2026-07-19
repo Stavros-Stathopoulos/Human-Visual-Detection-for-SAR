@@ -1,0 +1,21 @@
+# IR -> RGB registration (docs/decisions.md #5)
+#
+# Affine map between normalized coordinates: rgb = a * ir + b, per axis.
+# Estimated by src/utils/estimate_registration.py on sequence
+# 210417_MtErie_Enterprise (891 matched box centers).
+# Residuals: median 29 px, mean 47 px, p95 136 px (RGB scale).
+#
+# CAVEAT: fitted on one sequence at one altitude. Re-estimate on the full
+# dataset before treating as global.
+
+affine:
+  x:
+    scale: 0.6813   # a: IR spans this fraction of RGB width
+    offset: 0.1710  # b: left edge of the IR footprint in RGB
+  y:
+    scale: 0.9304
+    offset: 0.0500
+
+ir_size:            # native IR resolution; also the fused-frame output size
+  width: 640
+  height: 512
