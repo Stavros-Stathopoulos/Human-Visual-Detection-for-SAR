@@ -1,0 +1,12 @@
+# Data pipeline
+numpy>=2.5
+pandas>=3.0
+opencv-python>=5.0
+matplotlib>=3.11
+pydantic>=2.13
+
+# Training (Phase 2+) — uncomment when model work starts
+# torch
+# torchvision
+# ultralytics
+# pyyaml
